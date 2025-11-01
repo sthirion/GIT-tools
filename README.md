@@ -103,10 +103,30 @@ Bash script that scans all subdirectories for git repositories and lists their b
    ```powershell
    function prompt {
        $location = Get-Location
-       Write-Host "$location " -NoNewline
-       Get-GitSuperStatus
-       Write-Host "> " -NoNewline
-       return " "
+       
+       # Check if we're in a git repository by testing for .git directory
+       $isGitRepo = $false
+       $currentPath = $location.Path
+       while ($currentPath -and $currentPath -ne (Split-Path $currentPath -Parent)) {
+           if (Test-Path (Join-Path $currentPath ".git")) {
+               $isGitRepo = $true
+               break
+           }
+           $currentPath = Split-Path $currentPath -Parent
+       }
+       
+       if ($isGitRepo) {
+           # If we're in a git repo, show only the directory name (repo name)
+           $repoName = Split-Path $location -Leaf
+           Write-Host "$repoName " -ForegroundColor White -NoNewline
+           Get-GitSuperStatus
+           Write-Host " > " -NoNewline
+       } else {
+           # If not in git repo, show full path
+           Write-Host "$location > " -NoNewline
+       }
+       
+       return ""
    }
    ```
 
@@ -127,13 +147,14 @@ Once installed, navigate to any git repository and your prompt will automaticall
 
 **Windows PowerShell:**
 ```
-C:\my-project [main|?+1] > 
+my-project [main|?+1] > 
 ```
 
 This shows:
-- `main`: current branch (colored)
-- `?`: untracked files
-- `+1`: 1 modified file
+- `my-project`: repository name only (not full path)
+- `main`: current branch (colored in Magenta)
+- `?`: untracked files (Cyan)
+- `+1`: 1 modified file (Blue)
 
 ### Status Indicators
 
@@ -193,6 +214,13 @@ $global:ZSH_THEME_GIT_PROMPT_BRANCH = "`e[35m"  # Magenta
 $global:ZSH_THEME_GIT_PROMPT_STAGED = "`e[31m●"  # Red
 # ... and more
 ```
+
+### Smart Path Display (PowerShell)
+The PowerShell implementation includes a smart path display feature:
+- **Inside Git repositories**: Shows only the repository name (e.g., `my-project`)
+- **Outside Git repositories**: Shows the full directory path (e.g., `C:\Users\username\Documents`)
+
+This keeps your prompt clean and focused while still providing context when needed.
 
 ### Performance
 For better performance in large repositories, you can enable caching:
